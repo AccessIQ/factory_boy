@@ -129,7 +129,7 @@ class FuzzyDecimalTestCase(unittest.TestCase):
             self.assertTrue(decimal.Decimal('2.0') <= res <= decimal.Decimal('3.0'),
                     "value %d is not between 2.0 and 3.0" % res)
 
-        fuzz = fuzzy.FuzzyDecimal(4.0)
+        fuzz = fuzzy.FuzzyDecimal(0.0, 4.0)
         for _i in range(20):
             res = utils.evaluate_declaration(fuzz)
             self.assertTrue(decimal.Decimal('0.0') <= res <= decimal.Decimal('4.0'),
@@ -165,7 +165,7 @@ class FuzzyDecimalTestCase(unittest.TestCase):
     def test_precision(self):
         fake_uniform = lambda low, high: low + high + 0.001
 
-        fuzz = fuzzy.FuzzyDecimal(8.0, precision=3)
+        fuzz = fuzzy.FuzzyDecimal(0.0, 8.0, precision=3)
 
         with mock.patch('factory.random.randgen.uniform', fake_uniform):
             res = utils.evaluate_declaration(fuzz)
@@ -243,6 +243,58 @@ class FuzzyDateTestCase(unittest.TestCase):
             res = utils.evaluate_declaration(fuzz)
 
         self.assertEqual(datetime.date(2013, 1, 2), res)
+
+
+class FuzzyTimeTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # Setup useful constants
+        cls.midnight = datetime.time()
+        cls.noon = datetime.time(12)
+        cls.last_msec = datetime.time(23, 59, 59, 999999)
+
+    def test_accurate_definition(self):
+        """Tests all ways of defining a FuzzyTime."""
+        fuzz = fuzzy.FuzzyTime(self.midnight, self.noon)
+
+        for _i in range(20):
+            res = fuzz.evaluate(2, None, False)
+            self.assertLessEqual(self.midnight, res)
+            self.assertLessEqual(res, self.noon)
+
+    def test_partial_definition(self):
+        """Test defining a FuzzyTime without passing an end time."""
+        fuzz = fuzzy.FuzzyTime(self.noon)
+
+        for _i in range(20):
+            res = fuzz.evaluate(2, None, False)
+            self.assertLessEqual(self.noon, res)
+            self.assertLessEqual(res, self.last_msec)
+
+    def test_invalid_definition(self):
+        self.assertRaises(ValueError, fuzzy.FuzzyTime,
+            self.noon, self.midnight)
+
+    def test_biased(self):
+        """Tests a FuzzyTime with a biased random.randint."""
+
+        fake_randint = lambda low, high: (low + high) // 2
+        fuzz = fuzzy.FuzzyTime(self.midnight, self.noon)
+
+        with mock.patch('factory.random.randgen.randint', fake_randint):
+            res = fuzz.evaluate(2, None, False)
+
+        self.assertEqual(datetime.time(6), res)
+
+    def test_biased_partial(self):
+        """Tests a FuzzyTime with a biased random and implicit upper bound."""
+        fuzz = fuzzy.FuzzyTime(self.noon)
+
+        fake_randint = lambda low, high: (low + high) // 2
+        with mock.patch('factory.random.randgen.randint', fake_randint):
+            res = fuzz.evaluate(2, None, False)
+
+        self.assertEqual(datetime.time(17, 59, 59, 999999), res)
 
 
 class FuzzyNaiveDateTimeTestCase(unittest.TestCase):
