@@ -927,15 +927,16 @@ class AutoDjangoFactoryTestCase(unittest.TestCase):
         self.assertEqual(2, obj2.nb)
 
     def test_auto_factory_partial(self):
-        class AutoFactory(factory.django.DjangoModelFactory):
-            class Meta:
-                model = models.ComprehensiveMultiFieldModel
-                auto_fields = [
-                    'nb',
-                    'dec', 'bigint', 'smallposint', 'fl', 'smallint',
-                    'dt', 'ts', 'time',
-                    'ipv4', 'ipv6', 'ipany',
-                ]
+        AutoFactory = factory.django.DjangoModelFactory.auto_factory(
+            model=models.ComprehensiveMultiFieldModel,
+            default_auto_fields=False,
+            include_auto_fields=[
+                'int',
+                'dec', 'bigint', 'smallposint', 'float', 'smallint', 'duration',
+                'date', 'datetime', 'time',
+                'ipv4', 'ipv6', 'ipany',
+                'uuid',
+            ])
 
         obj = AutoFactory.create(posint=0)
         self.assertLessEqual(-1000, obj.nb)
@@ -947,7 +948,7 @@ class AutoDjangoFactoryTestCase(unittest.TestCase):
         class AutoFactory(factory.django.DjangoModelFactory):
             class Meta:
                 model = models.ForeignKeyModel
-                auto_fields = ['*']
+                default_auto_fields = True
 
         obj = AutoFactory.create()
         self.assertEqual(20, len(obj.name))
