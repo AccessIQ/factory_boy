@@ -171,7 +171,7 @@ class BaseIntrospector(object):
         raise NotImplementedError("Introspector %r doesn't know how to fetch field %s from %r"
             % (self._factory_class, field_name, model))
 
-    def build_declaration(self, field_name, field, sub_skips):
+    def build_declaration(self, field_ctxt):
         """Build a factory.Declaration from a field_name/field combination.
 
         Relies on ``self.DEFAULT_BUILDERS``.
@@ -179,17 +179,11 @@ class BaseIntrospector(object):
         Returns:
             factory.Declaration or None.
         """
+        field = field_ctxt.field
         if field.__class__ not in self.builders:
             raise NotImplementedError(
                     "Introspector %r lacks recipe for building field %r; add it to %s.Meta.auto_fields_rules."
                     % (self, field, self._factory_class.__name__))
-        field_ctxt = FieldContext(
-            field=field,
-            field_name=field_name,
-            model=self._model,
-            factory=self._factory_class,
-            skips=sub_skips,
-        )
         builder = self.builders[field.__class__]
         return builder(field_ctxt)
 
@@ -222,7 +216,15 @@ class BaseIntrospector(object):
             ]
 
             field = self.get_field_by_name(self._model, field_name)
-            declaration = self.build_declaration(field_name, field, sub_skips)
+
+            field_ctxt = FieldContext(
+                field=field,
+                field_name=field_name,
+                model=self._model,
+                factory=self._factory_class,
+                skips=sub_skips,
+            )
+            declaration = self.build_declaration(field_ctxt)
             if declaration is not None:
                 declarations[field_name] = declaration
 
