@@ -73,7 +73,8 @@ def _lazy_load_get_model():
 def build_foreign_key(field_context):
     factory_class = DjangoModelFactory.auto_factory(
         field_context.field.rel.to,
-        **dict((sk, None) for sk in field_context.skips))
+        exclude_auto_fields=field_context.skips,
+    )
     return declarations.SubFactory(factory_class)
 
 
@@ -182,7 +183,7 @@ class DjangoIntrospector(base.BaseIntrospector):
         else:
             return model._meta.get_fields()
 
-    def get_field_names(self, model):
+    def get_default_field_names(self, model):
         return [
             field.name
             for field in self._compat_get_fields(model)
