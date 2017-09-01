@@ -173,12 +173,12 @@ class OptionalModel(models.Model):
 
 class ForeignKeyModel(models.Model):
     name = models.CharField(max_length=20)
-    target = models.ForeignKey(ComprehensiveMultiFieldModel)
+    target = models.ForeignKey(ComprehensiveMultiFieldModel, on_delete=models.CASCADE)
 
 
 class OneToOneModel(models.Model):
     name = models.CharField(max_length=20)
-    relates_to = models.OneToOneField(ForeignKeyModel)
+    relates_to = models.OneToOneField(ForeignKeyModel, on_delete=models.CASCADE)
 
 
 class ManyToManySourceModel(models.Model):
@@ -188,8 +188,8 @@ class ManyToManySourceModel(models.Model):
 
 class ManyToManyThroughModel(models.Model):
     name = models.CharField(max_length=20)
-    multi = models.ForeignKey(ComprehensiveMultiFieldModel)
-    source = models.ForeignKey('ManyToManyWithThroughSourceModel')
+    multi = models.ForeignKey(ComprehensiveMultiFieldModel, on_delete=models.CASCADE)
+    source = models.ForeignKey('ManyToManyWithThroughSourceModel', on_delete=models.CASCADE)
 
 
 class ManyToManyWithThroughSourceModel(models.Model):
@@ -199,16 +199,16 @@ class ManyToManyWithThroughSourceModel(models.Model):
 
 class CycleAModel(models.Model):
     a_name = models.CharField(max_length=10)
-    c_fkey = models.ForeignKey('CycleCModel', null=True)
+    c_fkey = models.ForeignKey('CycleCModel', on_delete=models.CASCADE, null=True)
 
 
 class CycleBModel(models.Model):
     b_name = models.CharField(max_length=10)
-    a_fkey = models.ForeignKey(CycleAModel)
+    a_fkey = models.ForeignKey(CycleAModel, on_delete=models.CASCADE)
 
 
 class CycleCModel(models.Model):
     c_name = models.CharField(max_length=10)
-    b_fkey = models.ForeignKey(CycleBModel)
+    b_fkey = models.ForeignKey(CycleBModel, on_delete=models.CASCADE)
 
 
