@@ -250,8 +250,10 @@ class FuzzyTime(BaseFuzzyAttribute):
     def _time_as_int(self, t):
         return (
             t.microsecond
-            + 1000000 * (t.second
-                + 60 * (t.minute
+            + 1000000 * (
+                t.second
+                + 60 * (
+                    t.minute
                     + 60 * t.hour
                 )
             )

@@ -24,7 +24,6 @@ except ImportError as e:  # pragma: no cover
     timezone = None
     import_failure = e
 
-
 from . import base
 from . import declarations
 from . import errors
