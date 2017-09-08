@@ -16,6 +16,7 @@ try:
     import django
     from django.core import files as django_files
     from django.db import models
+    from django.db.models.fields import proxy
     from django.utils import timezone
 except ImportError as e:  # pragma: no cover
     django = None
@@ -166,29 +167,38 @@ class DjangoIntrospector(base.BaseIntrospector):
     ]
 
     @classmethod
-    def _is_concrete_field(cls, field):
-        return field.__class__ not in [
-            models.AutoField,
-            models.ManyToOneRel,
-            models.ManyToManyRel,
-        ]
+    def _is_default_field(cls, model, field):
+        if field.auto_created:
+            return False
 
-    def _compat_get_fields(self, model):
-        if django.VERSION[:2] < (1, 8):
-            return [
-                field for field, _model in model._meta.get_fields_with_model()
-            ] + [
-                field for field, _model in model._meta.get_m2m_with_model()
-            ]
-        else:
-            return model._meta.get_fields()
+        # Handle GenericForeignKey (untested!)
+        if field.is_relation and field.related_model is None:
+            assert field.concrete   # Are we sure about this?
+            return False
+
+        if not field.concrete:
+            return False
+
+        if isinstance(field, (models.AutoField, proxy.OrderWrt)):
+            return False
+
+        return cls._is_required_field(model, field)
+
+    @classmethod
+    def _is_required_field(cls, model, field):
+        # Fields won't let you set an invalid default so if there is a default then it  must be ok
+        if field.has_default():
+            return False
+
+        # Check if it will pass model field blank validation
+        if not field.blank:
+            return field.get_default() in field.empty_values
+
+        # Check if it will pass DB NULL validation
+        return not field.null and field.get_default() is None
 
     def get_default_field_names(self, model):
-        return [
-            field.name
-            for field in self._compat_get_fields(model)
-            if self._is_concrete_field(field) and not field.blank
-        ]
+        return [field.name for field in model._meta.get_fields() if self._is_default_field(model, field)]
 
     def get_field_by_name(self, model, field_name):
         if django.VERSION[:2] < (1, 8):
