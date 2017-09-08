@@ -818,7 +818,7 @@ class BaseFactory(object):
         Returns:
             Factory subclass: the generated factory
         """
-        factory_name = '%sAutoFactory' % target_model.__name__
+        factory_name = str('%sAutoFactory' % model.__name__)
 
         # work around variable shadowing
         _model = model
