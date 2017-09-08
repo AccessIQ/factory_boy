@@ -73,7 +73,7 @@ def _lazy_load_get_model():
 
 def build_foreign_key(field_context):
     factory_class = DjangoModelFactory.auto_factory(
-        field_context.field.rel.to,
+        field_context.field.related_model,
         exclude_auto_fields=field_context.skips,
     )
     return declarations.SubFactory(factory_class)
@@ -81,9 +81,17 @@ def build_foreign_key(field_context):
 
 def build_manytomany(field_context):
     field = field_context.field
-    if field.rel.through._meta.auto_created:
+
+    try:
+        remote_field = field.remote_field
+    except AttributeError:
+        remote_field = field.rel
+    through = remote_field.through
+
+    if through._meta.auto_created:
         # ManyToManyField without a through
-        factory_class = DjangoModelFactory.auto_factory(field.rel.to)
+        factory_class = DjangoModelFactory.auto_factory(field.related_model)
+
         def add_relateds(obj, create, _extracted, **_kwargs):
             manager = getattr(obj, field.name)
             for related in factory_class.create_batch(2):
@@ -93,7 +101,7 @@ def build_manytomany(field_context):
         # ManyToManyField with a through
         extra_fields = {field.m2m_field_name(): None}
         factory_class = DjangoModelFactory.auto_factory(
-            field.rel.through,
+            through,
             **extra_fields)
         return declarations.RelatedFactory(factory_class, field.m2m_field_name())
 
