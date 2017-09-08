@@ -119,6 +119,10 @@ def build_charfield(field_context):
     return fuzzy.FuzzyText(length=field_context.field.max_length)
 
 
+def build_choices(field_context):
+    return fuzzy.FuzzyChoice(x[0] for x in field_context.field.choices)
+
+
 def build_datetime(field_context):
     from django.conf import settings
     if settings.USE_TZ:
@@ -212,6 +216,11 @@ class DjangoIntrospector(base.BaseIntrospector):
 
     def get_field_by_name(self, model, field_name):
         return model._meta.get_field(field_name)
+
+    def build_declaration(self, field_ctxt):
+        if field_ctxt.field.choices:
+            return build_choices(field_ctxt)
+        return super(DjangoIntrospector, self).build_declaration(field_ctxt)
 
 
 class DjangoOptions(base.FactoryOptions):
