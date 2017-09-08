@@ -127,7 +127,7 @@ class FromAbstractWithCustomManager(AbstractWithCustomManager):
 
 class ComprehensiveMultiFieldModel(models.Model):
     # Text
-    chars = models.CharField(max_length=4)  # Below FuzzyText' boundary
+    char = models.CharField(max_length=4)  # Below FuzzyText' boundary
     text = models.TextField()
     slug = models.SlugField()
 
@@ -136,23 +136,23 @@ class ComprehensiveMultiFieldModel(models.Model):
     boolean = models.BooleanField(default=False)
     nullboolean = models.NullBooleanField()
     if django.VERSION[:2] >= (1, 8):
-        uu = models.UUIDField()
+        uuid = models.UUIDField()
 
     # Date and time
-    dt = models.DateField()
-    ts = models.DateTimeField()
+    date = models.DateField()
+    datetime = models.DateTimeField()
     time = models.TimeField()
     if django.VERSION[:2] >= (1, 8):
         duration = models.DurationField()
 
     # Numbers
-    nb = models.IntegerField()
+    int = models.IntegerField()
     dec = models.DecimalField(max_digits=10, decimal_places=4)
     bigint = models.BigIntegerField()
     posint = models.PositiveIntegerField()
     smallint = models.SmallIntegerField()
     smallposint = models.PositiveSmallIntegerField()
-    fl = models.FloatField()
+    float = models.FloatField()
 
     # Filed
     attached = models.FileField()
@@ -167,8 +167,19 @@ class ComprehensiveMultiFieldModel(models.Model):
 
 
 class OptionalModel(models.Model):
-    req = models.CharField(max_length=10)
-    opt = models.CharField(max_length=3, blank=True)
+    CHAR_LEN = 19
+
+    char_req = models.CharField(max_length=CHAR_LEN)
+    char_blank = models.CharField(max_length=CHAR_LEN, blank=True)
+    char_null = models.CharField(max_length=CHAR_LEN, null=True)
+    char_blank_null = models.CharField(max_length=CHAR_LEN, blank=True, null=True)
+    char_blank_null_default = models.CharField(max_length=CHAR_LEN, blank=True, null=True, default='hello world')
+
+    int_req = models.IntegerField()
+    int_blank = models.IntegerField(blank=True)
+    int_null = models.IntegerField(null=True)
+    int_blank_null = models.IntegerField(blank=True, null=True)
+    int_blank_null_default = models.IntegerField(blank=True, null=True, default=5)
 
 
 class ForeignKeyModel(models.Model):
@@ -178,12 +189,14 @@ class ForeignKeyModel(models.Model):
 
 class OneToOneModel(models.Model):
     name = models.CharField(max_length=20)
-    relates_to = models.OneToOneField(ForeignKeyModel, on_delete=models.CASCADE)
+    relates_to_req = models.OneToOneField(ForeignKeyModel, on_delete=models.CASCADE)
+    relates_to_opt = models.OneToOneField(OptionalModel, on_delete=models.CASCADE, blank=True, null=True)
 
 
 class ManyToManySourceModel(models.Model):
     name = models.CharField(max_length=20)
-    targets = models.ManyToManyField(ComprehensiveMultiFieldModel)
+    targets_req = models.ManyToManyField(ComprehensiveMultiFieldModel, blank=False)
+    targets_opt = models.ManyToManyField(OptionalModel, blank=True)
 
 
 class ManyToManyThroughModel(models.Model):

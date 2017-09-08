@@ -15,6 +15,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'tests.djapp.settings')
 django.setup()
 from django import test as django_test
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models as django_models
 from django.test.runner import DiscoverRunner as DjangoTestSuiteRunner
 from django.test import utils as django_test_utils
@@ -911,20 +912,29 @@ class AutoDjangoFactoryTestCase(unittest.TestCase):
         AutoFactory = factory.django.DjangoModelFactory.auto_factory(models.ComprehensiveMultiFieldModel)
 
         obj = AutoFactory.create()
-        self.assertLess(-1000, obj.nb)
-        self.assertLess(obj.nb, 1000)
-        self.assertEqual(4, len(obj.chars))
-        self.assertIsNotNone(obj.ts.year)
+        obj.full_clean()
+        self.assertLess(-1000, obj.int)
+        self.assertLess(obj.int, 1000)
+        self.assertEqual(4, len(obj.char))
+        self.assertIsNotNone(obj.datetime.year)
+        self.assertIsNotNone(obj.boolean)
+        self.assertIsNone(obj.nullboolean)
+
 
     def test_auto_factory_with_override(self):
         AutoFactory = factory.django.DjangoModelFactory.auto_factory(models.ComprehensiveMultiFieldModel,
-            nb=factory.Sequence(lambda n: n * 2),
+            int=factory.Sequence(lambda n: n * 2),
         )
         obj1 = AutoFactory.create()
+        obj1.full_clean()
         obj2 = AutoFactory.create()
+        obj2.full_clean()
+        obj3 = AutoFactory.create()
+        obj3.full_clean()
 
-        self.assertEqual(0, obj1.nb)
-        self.assertEqual(2, obj2.nb)
+        self.assertEqual(0, obj1.int)
+        self.assertEqual(2, obj2.int)
+        self.assertEqual(4, obj3.int)
 
     def test_auto_factory_partial(self):
         AutoFactory = factory.django.DjangoModelFactory.auto_factory(
@@ -939,49 +949,76 @@ class AutoDjangoFactoryTestCase(unittest.TestCase):
             ])
 
         obj = AutoFactory.create(posint=0)
-        self.assertLessEqual(-1000, obj.nb)
-        self.assertLess(obj.nb, 1000)
-        self.assertEqual('', obj.chars)
-        self.assertIsNotNone(obj.ts.year)
+        self.assertLessEqual(-1000, obj.int)
+        self.assertLess(obj.int, 1000)
+        self.assertEqual('', obj.char)
+        self.assertIsNotNone(obj.datetime.year)
+        with self.assertRaises(ValidationError):
+            obj.full_clean()
 
-    def test_auto_factory_foreignkey(self):
+    def test_foreignkey(self):
+        AutoFactory = factory.django.DjangoModelFactory.auto_factory(models.ForeignKeyModel)
+        obj = AutoFactory.create()
+        obj.full_clean()
+
+        self.assertEqual(20, len(obj.name))
+        self.assertIsNotNone(obj.target)
+
+    def test_foreignkey_reverse(self):
         class AutoFactory(factory.django.DjangoModelFactory):
             class Meta:
                 model = models.ForeignKeyModel
                 default_auto_fields = True
 
         obj = AutoFactory.create()
+        obj.full_clean()
         self.assertEqual(20, len(obj.name))
         self.assertIsNotNone(obj.target)
 
-    def test_auto_factory_one_to_one(self):
+    def test_one_to_one(self):
         AutoFactory = factory.django.DjangoModelFactory.auto_factory(models.OneToOneModel)
 
         obj = AutoFactory.create()
-        self.assertIsNotNone(obj.relates_to)
-        self.assertIsNotNone(obj.relates_to.target)
+        obj.full_clean()
+        self.assertIsNotNone(obj.relates_to_req)
+        self.assertIsNotNone(obj.relates_to_req.target)
+        self.assertIsNone(obj.relates_to_opt)
 
-    def test_auto_factory_manytomany(self):
+    def test_manytomany(self):
         AutoFactory = factory.django.DjangoModelFactory.auto_factory(models.ManyToManySourceModel)
-
         obj = AutoFactory.create()
+        obj.full_clean()
         self.assertEqual(20, len(obj.name))
-        self.assertEqual(2, len(obj.targets.all()))
+        self.assertEqual(0, len(obj.targets_opt.all()))
+        self.assertLessEqual(2, len(obj.targets_req.all()))
 
-    def test_auto_factory_manytomany_with_through(self):
-        AutoFactory = factory.django.DjangoModelFactory.auto_factory(models.ManyToManyWithThroughSourceModel)
+    def test_relationship_reverse(self):
+        AutoFactory = factory.django.DjangoModelFactory.auto_factory(models.ComprehensiveMultiFieldModel)
+        obj = AutoFactory.create()
+        obj.full_clean()
+        self.assertEqual(0, obj.foreignkeymodel_set.count())
+        self.assertEqual(0, obj.manytomanysourcemodel_set.count())
+        self.assertEqual(0, obj.manytomanythroughmodel_set.count())
+        self.assertEqual(0, obj.manytomanywiththroughsourcemodel_set.count())
+
+    def test_manytomany_with_through(self):
+        AutoFactory = factory.django.DjangoModelFactory.auto_factory(
+            models.ManyToManyWithThroughSourceModel,
+            include_auto_fields=['targets'])
 
         obj = AutoFactory.create()
+        obj.full_clean()
         self.assertEqual(20, len(obj.name))
         self.assertEqual(1, len(obj.targets.all()))
 
-    def test_auto_factory_foreignkey_cycle(self):
+    def test_foreignkey_cycle(self):
         AutoFactory = factory.django.DjangoModelFactory.auto_factory(
             models.CycleCModel,
             b_fkey__a_fkey__c_fkey=None,
         )
 
         obj = AutoFactory.create()
+        obj.full_clean()
         self.assertIsNotNone(obj.b_fkey)
         self.assertIsNotNone(obj.b_fkey.a_fkey)
         self.assertIsNone(obj.b_fkey.a_fkey.c_fkey)
@@ -989,8 +1026,46 @@ class AutoDjangoFactoryTestCase(unittest.TestCase):
     def test_optional_field(self):
         AutoFactory = factory.django.DjangoModelFactory.auto_factory(models.OptionalModel)
         obj = AutoFactory.create()
-        self.assertEqual(10, len(obj.req))
-        self.assertEqual('', obj.opt)
+        obj.full_clean()
+        self.assertEqual(obj.CHAR_LEN, len(obj.char_req))
+        self.assertEqual('', obj.char_blank)
+        self.assertEqual(obj.CHAR_LEN, len(obj.char_null))
+        self.assertIsNone(obj.char_blank_null)
+        self.assertEqual(obj._meta.get_field('char_blank_null_default').default, obj.char_blank_null_default)
+
+        self.assertIsNotNone(obj.int_req)
+        self.assertIsInstance(obj.int_blank, int)
+        self.assertIsInstance(obj.int_null, int)
+        self.assertIsNone(obj.int_blank_null)
+        self.assertEqual(obj._meta.get_field('int_blank_null_default').default, obj.int_blank_null_default)
+
+    def test_optional_field_include(self):
+        AutoFactory = factory.django.DjangoModelFactory.auto_factory(
+            model=models.OptionalModel,
+            include_auto_fields=['char_blank_null'])
+        obj = AutoFactory.create()
+        obj.full_clean()
+        self.assertEqual(obj.CHAR_LEN, len(obj.char_blank_null))
+
+    def test_required_field_exclude_char(self):
+        AutoFactory = factory.django.DjangoModelFactory.auto_factory(
+            model=models.OptionalModel,
+            exclude_auto_fields=['int_req'])
+
+        obj = AutoFactory.build()
+        with self.assertRaises(ValidationError):
+            obj.full_clean()
+
+    def test_required_field_exclude_char(self):
+        # because of the special blank/null handling by char/text etc, clean() won't actually fail
+        AutoFactory = factory.django.DjangoModelFactory.auto_factory(
+            model=models.OptionalModel,
+            exclude_auto_fields=['char_req'])
+
+        obj = AutoFactory.build()
+        with self.assertRaises(ValidationError):
+            obj.full_clean()
+
 
 if __name__ == '__main__':  # pragma: no cover
     unittest.main()
