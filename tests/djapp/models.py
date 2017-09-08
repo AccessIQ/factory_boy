@@ -140,6 +140,8 @@ class ComprehensiveMultiFieldModel(models.Model):
     # Date and time
     date = models.DateField()
     datetime = models.DateTimeField()
+    datetime_auto_now = models.DateTimeField(auto_now=True)
+    datetime_auto_now_add = models.DateTimeField(auto_now_add=True)
     time = models.TimeField()
     duration = models.DurationField()
 
@@ -223,3 +225,51 @@ class CycleCModel(models.Model):
     b_fkey = models.ForeignKey(CycleBModel, on_delete=models.CASCADE)
 
 
+class OrderWithRespectTo(models.Model):
+    fk = models.ForeignKey(ComprehensiveMultiFieldModel, on_delete=models.CASCADE)
+
+    class Meta:
+        order_with_respect_to = 'fk'
+
+
+class ParentModel(models.Model):
+    char_req = models.CharField(max_length=20)
+    char_opt = models.CharField(max_length=20, blank=True, null=True)
+
+    int_req = models.IntegerField()
+    int_opt = models.IntegerField(blank=True, null=True)
+
+    fk = models.ForeignKey(ComprehensiveMultiFieldModel, on_delete=models.CASCADE)
+
+    class Meta:
+        abstract = True
+
+
+class ChildModel(ParentModel):
+    char_req2 = models.CharField(max_length=20)
+    char_opt2 = models.CharField(max_length=20, blank=True, null=True)
+
+    int_req2 = models.IntegerField()
+    int_opt2 = models.IntegerField(blank=True, null=True)
+
+    fk2 = models.ForeignKey(OptionalModel, on_delete=models.CASCADE)
+
+
+class MultiTableParentModel(models.Model):
+    char_req = models.CharField(max_length=20)
+    char_opt = models.CharField(max_length=20, blank=True, null=True)
+
+    int_req = models.IntegerField()
+    int_opt = models.IntegerField(blank=True, null=True)
+
+    fk = models.ForeignKey(ComprehensiveMultiFieldModel, on_delete=models.CASCADE)
+
+
+class MultiTableChildModel(MultiTableParentModel):
+    char_req2 = models.CharField(max_length=20)
+    char_opt2 = models.CharField(max_length=20, blank=True, null=True)
+
+    int_req2 = models.IntegerField()
+    int_opt2 = models.IntegerField(blank=True, null=True)
+
+    fk2 = models.ForeignKey(OptionalModel, on_delete=models.CASCADE)

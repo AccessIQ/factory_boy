@@ -140,14 +140,14 @@ class DjangoIntrospector(base.BaseIntrospector):
             high=10 ** (ctxt.field.max_digits - ctxt.field.decimal_places) - 1,
             precision=ctxt.field.decimal_places,
         )),
-        (models.FloatField, lambda _ctxt: fuzzy.FuzzyFloat()),
+        (models.FloatField, lambda _ctxt: fuzzy.FuzzyFloat(-1e50, 1e50)),
 
         # Text
         (models.CharField, build_charfield),
         (models.TextField, lambda _ctxt: fuzzy.FuzzyText(length=3000, chars=string.ascii_letters + ' .,?!\n')),
         (models.SlugField, lambda ctxt: fuzzy.FuzzyText(
             length=ctxt.field.max_length,
-            chars=string.ascii_letters + string.digits + '.-_',
+            chars=string.ascii_letters + string.digits + '-_',
         )),
 
         # Internet

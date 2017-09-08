@@ -20,6 +20,7 @@ from django.db import models as django_models
 from django.test.runner import DiscoverRunner as DjangoTestSuiteRunner
 from django.test import utils as django_test_utils
 from django.db.models import signals
+from django.utils import timezone
 from .djapp import models
 
 
@@ -920,6 +921,12 @@ class AutoDjangoFactoryTestCase(unittest.TestCase):
         self.assertIsNotNone(obj.boolean)
         self.assertIsNone(obj.nullboolean)
 
+        now = timezone.now()
+        self.assertIsNotNone(obj.datetime_auto_now)
+        self.assertIsNotNone(obj.datetime_auto_now_add)
+        self.assertLessEqual((now - obj.datetime_auto_now).total_seconds(), 5.0)
+        self.assertLessEqual((now - obj.datetime_auto_now_add).total_seconds(), 5.0)
+
 
     def test_auto_factory_with_override(self):
         AutoFactory = factory.django.DjangoModelFactory.auto_factory(models.ComprehensiveMultiFieldModel,
@@ -1066,6 +1073,61 @@ class AutoDjangoFactoryTestCase(unittest.TestCase):
         with self.assertRaises(ValidationError):
             obj.full_clean()
 
+    def test_order_with_respect_to(self):
+        AutoFactory = factory.django.DjangoModelFactory.auto_factory(models.OrderWithRespectTo)
+        obj = AutoFactory.create()
+        obj.full_clean()
+
+    def test_inheritance_abstract(self):
+        models.ParentModel._meta.get_field('fk').related_model.objects.all().delete()
+        models.ChildModel._meta.get_field('fk2').related_model.objects.all().delete()
+        models.ChildModel.objects.all().delete()
+
+        AutoFactory = factory.django.DjangoModelFactory.auto_factory(models.ChildModel)
+        obj = AutoFactory.create()
+        obj.full_clean()
+
+        self.assertEqual(20, len(obj.char_req))
+        self.assertEqual(20, len(obj.char_req2))
+        self.assertIsNone(obj.char_opt)
+        self.assertIsNone(obj.char_opt2)
+
+        self.assertIsInstance(obj.int_req, int)
+        self.assertIsInstance(obj.int_req2, int)
+        self.assertIsNone(obj.int_opt)
+        self.assertIsNone(obj.int_opt2)
+
+        self.assertEqual(1, models.ChildModel._meta.get_field('fk').related_model.objects.count())
+        self.assertEqual(1, models.ChildModel._meta.get_field('fk2').related_model.objects.count())
+        self.assertEqual(1, models.ChildModel.objects.count())
+
+    def test_inheritance_multitable(self):
+        models.MultiTableParentModel._meta.get_field('fk').related_model.objects.all().delete()
+        models.MultiTableParentModel.objects.all().delete()
+        models.MultiTableChildModel._meta.get_field('fk2').related_model.objects.all().delete()
+        models.MultiTableChildModel.objects.all().delete()
+
+        AutoFactory = factory.django.DjangoModelFactory.auto_factory(models.MultiTableChildModel)
+        obj = AutoFactory.create()
+        obj.full_clean()
+
+        self.assertEqual(20, len(obj.char_req))
+        self.assertEqual(20, len(obj.char_req2))
+        self.assertIsNone(obj.char_opt)
+        self.assertIsNone(obj.char_opt2)
+
+        self.assertIsInstance(obj.int_req, int)
+        self.assertIsInstance(obj.int_req2, int)
+        self.assertIsNone(obj.int_opt)
+        self.assertIsNone(obj.int_opt2)
+
+        self.assertEqual(1, models.MultiTableParentModel._meta.get_field('fk').related_model.objects.count())
+        self.assertEqual(1, models.MultiTableChildModel._meta.get_field('fk2').related_model.objects.count())
+        self.assertEqual(1, models.MultiTableParentModel.objects.count())
+        self.assertEqual(1, models.MultiTableChildModel.objects.count())
+
+    # TODO: Test GenericForeignKey
+    # TODO: Test GenericForeignKey reverse (GenericRelation?)
 
 if __name__ == '__main__':  # pragma: no cover
     unittest.main()
