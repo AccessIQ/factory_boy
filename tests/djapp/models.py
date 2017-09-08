@@ -182,6 +182,24 @@ class OptionalModel(models.Model):
     int_blank_null_default = models.IntegerField(blank=True, null=True, default=5)
 
 
+class ChoicesModel(models.Model):
+    CHAR_CHOICES = (
+        ('A', 'AAA'),
+        ('B', 'BBB'),
+        ('C', 'CCC'),
+    )
+
+    INT_CHOICES = (
+        (99, 'Hello'),
+        (101, 'World'),
+    )
+
+    char_req = models.CharField(max_length=100, choices=CHAR_CHOICES)
+    char_opt = models.CharField(max_length=100, choices=CHAR_CHOICES, blank=True, null=True)
+    int_req = models.IntegerField(choices=INT_CHOICES)
+    int_opt = models.IntegerField(choices=INT_CHOICES, blank=True, null=True)
+
+
 class ForeignKeyModel(models.Model):
     name = models.CharField(max_length=20)
     target = models.ForeignKey(ComprehensiveMultiFieldModel, on_delete=models.CASCADE)

@@ -963,6 +963,14 @@ class AutoDjangoFactoryTestCase(unittest.TestCase):
         with self.assertRaises(ValidationError):
             obj.full_clean()
 
+    def test_choices(self):
+        AutoFactory = factory.django.DjangoModelFactory.auto_factory(models.ChoicesModel)
+        for i in range(30):
+            obj = AutoFactory.create()
+            obj.full_clean() # will validate that choices are selected
+            self.assertIsNone(obj.char_opt)
+            self.assertIsNone(obj.int_opt)
+
     def test_foreignkey(self):
         AutoFactory = factory.django.DjangoModelFactory.auto_factory(models.ForeignKeyModel)
         obj = AutoFactory.create()
