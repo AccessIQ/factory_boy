@@ -1062,7 +1062,33 @@ class AutoDjangoFactoryTestCase(unittest.TestCase):
         obj.full_clean()
         self.assertEqual(obj.CHAR_LEN, len(obj.char_blank_null))
 
-    def test_required_field_exclude_char(self):
+    def test_optional_field_include_all(self):
+        AutoFactory = factory.django.DjangoModelFactory.auto_factory(
+            model=models.OptionalModel,
+            introspector_class=factory.django.AllFieldsDjangoIntrospector)
+        obj = AutoFactory.create()
+        obj.full_clean()
+
+        self.assertEqual(obj.CHAR_LEN, len(obj.char_req))
+        self.assertEqual(obj.CHAR_LEN, len(obj.char_blank))
+        self.assertEqual(obj.CHAR_LEN, len(obj.char_null))
+        self.assertEqual(obj.CHAR_LEN, len(obj.char_blank_null))
+        self.assertEqual(obj.CHAR_LEN, len(obj.char_blank_null_default))
+
+        self.assertIsInstance(obj.int_req, int)
+        self.assertIsInstance(obj.int_blank, int)
+        self.assertIsInstance(obj.int_null, int)
+        self.assertIsInstance(obj.int_blank_null, int)
+        self.assertIsInstance(obj.int_blank_null_default, int)
+
+    def test_optional_field_include_unknown(self):
+        AutoFactory = factory.django.DjangoModelFactory.auto_factory(
+            model=models.OptionalModel,
+            include_auto_fields=['nonexistentfield'])
+        obj = AutoFactory.create()
+        obj.full_clean()
+
+    def test_required_field_exclude_int(self):
         AutoFactory = factory.django.DjangoModelFactory.auto_factory(
             model=models.OptionalModel,
             exclude_auto_fields=['int_req'])

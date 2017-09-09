@@ -228,6 +228,20 @@ class DjangoIntrospector(base.BaseIntrospector):
         return super(DjangoIntrospector, self).build_declaration(field_ctxt)
 
 
+class AllFieldsDjangoIntrospectorMixin(object):
+    """
+    A mixin for DjangoIntrospector that will return all 'normal' fields.
+    It won't try to include certain special fields (eg reverse foreign keys, autoincrement fields)
+    """
+    @classmethod
+    def _is_required_field(cls, model, field):
+        return True
+
+
+class AllFieldsDjangoIntrospector(AllFieldsDjangoIntrospectorMixin, DjangoIntrospector):
+    pass
+
+
 class DjangoOptions(base.FactoryOptions):
     DEFAULT_INTROSPECTOR_CLASS = DjangoIntrospector
 
