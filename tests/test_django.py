@@ -1081,6 +1081,13 @@ class AutoDjangoFactoryTestCase(unittest.TestCase):
         with self.assertRaises(ValidationError):
             obj.full_clean()
 
+    def test_optional_field_exclude_unknown(self):
+        AutoFactory = factory.django.DjangoModelFactory.auto_factory(
+            model=models.OptionalModel,
+            exclude_auto_fields=['nonexistentfield'])
+        obj = AutoFactory.create()
+        obj.full_clean()
+
     def test_order_with_respect_to(self):
         AutoFactory = factory.django.DjangoModelFactory.auto_factory(models.OrderWithRespectTo)
         obj = AutoFactory.create()

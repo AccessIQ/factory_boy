@@ -215,9 +215,14 @@ class DjangoIntrospector(base.BaseIntrospector):
         return [field.name for field in model._meta.get_fields() if self._is_default_field(model, field)]
 
     def get_field_by_name(self, model, field_name):
-        return model._meta.get_field(field_name)
+        try:
+            return model._meta.get_field(field_name)
+        except django.core.exceptions.FieldDoesNotExist:
+            return None
 
     def build_declaration(self, field_ctxt):
+        if field_ctxt.field is None:
+            return None
         if field_ctxt.field.choices:
             return build_choices(field_ctxt)
         return super(DjangoIntrospector, self).build_declaration(field_ctxt)
