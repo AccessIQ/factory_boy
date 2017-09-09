@@ -154,11 +154,13 @@ class DjangoIntrospector(base.BaseIntrospector):
         (models.NullBooleanField, lambda _ctxt: fuzzy.FuzzyChoice([None, True, False])),
         (models.FileField, lambda _ctxt: FileField()),
         (models.ImageField, lambda _ctxt: ImageField()),
+        (models.UUIDField, lambda _ctxt: faker.Faker('uuid4')),
 
         # Date / Time
         (models.DateField, lambda _ctxt: fuzzy.FuzzyDate()),
         (models.DateTimeField, build_datetime),
         (models.TimeField, lambda _ctxt: fuzzy.FuzzyTime()),
+        (models.DurationField, lambda _ctxt: faker.Faker('time_delta')),
 
         # Relational
         (models.ForeignKey, build_foreign_key),
@@ -201,10 +203,7 @@ class DjangoIntrospector(base.BaseIntrospector):
         return [field.name for field in model._meta.get_fields() if self._is_default_field(model, field)]
 
     def get_field_by_name(self, model, field_name):
-        if django.VERSION[:2] < (1, 8):
-            return model._meta.get_field_by_name(field_name)[0]
-        else:
-            return model._meta.get_field(field_name)
+        return model._meta.get_field(field_name)
 
 
 class DjangoOptions(base.FactoryOptions):
