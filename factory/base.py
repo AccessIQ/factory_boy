@@ -165,23 +165,37 @@ class BaseIntrospector(object):
         self._model = self._factory_class._meta.model
 
     def get_default_field_names(self, model):
-        """Fetch default "auto-declarable" field names from a model."""
+        """
+        Fetch default "auto-declarable" field names from a model.
+        Override to define what fields are included by default
+        """
         raise NotImplementedError("Introspector %r doesn't know how to extract fields from %s" % (self, model))
 
     def get_field_by_name(self, model, field_name):
-        """Get the actual "field descriptor" for a given field name"""
+        """
+        Get the actual "field descriptor" for a given field name
+        Actual return value will depend on your underlying lib
+        May return None if the field does not exist
+        """
         raise NotImplementedError(
             "Introspector %r doesn't know how to fetch field %s from %r"
             % (self._factory_class, field_name, model))
 
     def build_declaration(self, field_ctxt):
-        """Build a factory.Declaration from a field_name/field combination.
+        """Build a factory.Declaration from a FieldContext
+
+        Note that FieldContext may be None if get_field_by_name() returned None
 
         Relies on ``self.DEFAULT_BUILDERS``.
+
+        Override to customise field generation.
 
         Returns:
             factory.Declaration or None.
         """
+        if field_ctxt.field is None:
+            return None
+
         field = field_ctxt.field
         if field.__class__ not in self.builders:
             raise NotImplementedError(
@@ -342,10 +356,9 @@ class FactoryOptions(object):
                 self.base_declarations[k] = v
 
         if not self.abstract and (self.default_auto_fields or self.include_auto_fields):
+            field_names = set()
             if self.default_auto_fields:
-                field_names = set(self.introspector.get_default_field_names(self.model))
-            else:
-                field_names = set()
+                field_names.update(self.introspector.get_default_field_names(self.model))
             field_names.update(self.include_auto_fields)
 
             exclude_auto_fields = set(self.base_declarations.keys())
