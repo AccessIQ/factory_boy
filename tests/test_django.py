@@ -1167,6 +1167,37 @@ class AutoDjangoFactoryTestCase(unittest.TestCase):
         self.assertEqual(1, models.MultiTableParentModel.objects.count())
         self.assertEqual(1, models.MultiTableChildModel.objects.count())
 
+    def test_factory_meta_inheritance(self):
+        """
+        Descendant factories should inherit the new autofactory meta attributes
+        """
+        class BaseFactory(factory.django.DjangoModelFactory):
+            class Meta:
+                abstract = True
+                model = models.OptionalModel
+                default_auto_fields = True
+                include_auto_fields = ['char_blank_null']
+                exclude_auto_fields = ['int_req']
+
+            char_req = '99 bottles of beer'
+
+        class ChildFactoryInherit(BaseFactory):
+            pass
+        obj = ChildFactoryInherit.build()
+        self.assertEqual(obj.char_req, BaseFactory.char_req, 'Auto Factories should use inherited explicit field declarations')
+        self.assertNotIn(obj.char_blank_null, (None, ''), 'Auto Factories should inherit include_auto_fields')
+        self.assertEqual(obj.int_req, None, 'Auto Factories should inherit exclude_auto_fields')
+
+        class ChildFactoryOverride(BaseFactory):
+            char_req = '98 bottles of beer'
+            class Meta:
+                include_auto_fields = []
+                exclude_auto_fields = []
+        obj = ChildFactoryOverride.build()
+        self.assertEqual(obj.char_req, ChildFactoryOverride.char_req, 'Auto Factories can override inherit explicit field declarations')
+        self.assertEqual(obj.char_blank_null, None, 'Auto Factories should allow include_auto_fields override')
+        self.assertNotEqual(obj.int_req, None, 'Auto Factories should allow exclude_auto_fields override')
+
     # TODO: Test GenericForeignKey
     # TODO: Test GenericForeignKey reverse (GenericRelation?)
 

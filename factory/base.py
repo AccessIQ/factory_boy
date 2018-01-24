@@ -294,9 +294,9 @@ class FactoryOptions(object):
             # Whether to auto-generate the default set of fields
             OptionDefault('default_auto_fields', False, inherit=True),
             # List of fields to include in auto-generation
-            OptionDefault('include_auto_fields', (), inherit=False),
+            OptionDefault('include_auto_fields', (), inherit=True),
             # List of fields to exclude from auto-generation
-            OptionDefault('exclude_auto_fields', (), inherit=False),
+            OptionDefault('exclude_auto_fields', (), inherit=True),
         ]
 
     def _fill_from_meta(self, meta, base_meta):
