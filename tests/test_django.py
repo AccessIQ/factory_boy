@@ -1167,36 +1167,118 @@ class AutoDjangoFactoryTestCase(unittest.TestCase):
         self.assertEqual(1, models.MultiTableParentModel.objects.count())
         self.assertEqual(1, models.MultiTableChildModel.objects.count())
 
-    def test_factory_meta_inheritance(self):
+    def test_factory_meta_inheritance_abstract(self):
         """
-        Descendant factories should inherit the new autofactory meta attributes
+        Descendant factories inheriting from abstract factories should inherit all autofactory meta attributes
         """
+
         class BaseFactory(factory.django.DjangoModelFactory):
+            char_blank_null = '99 bottles of beer'
+
             class Meta:
                 abstract = True
                 model = models.OptionalModel
                 default_auto_fields = True
-                include_auto_fields = ['char_blank_null']
-                exclude_auto_fields = ['int_req']
+                include_auto_fields = ['char_blank_null', 'int_blank_null']
+                exclude_auto_fields = ['int_req', 'char_req']
 
-            char_req = '99 bottles of beer'
+        class ChildFactory(BaseFactory):
+            char_blank_null = '97 bottles of beer'
 
-        class ChildFactoryInherit(BaseFactory):
-            pass
-        obj = ChildFactoryInherit.build()
-        self.assertEqual(obj.char_req, BaseFactory.char_req, 'Auto Factories should use inherited explicit field declarations')
-        self.assertNotIn(obj.char_blank_null, (None, ''), 'Auto Factories should inherit include_auto_fields')
-        self.assertEqual(obj.int_req, None, 'Auto Factories should inherit exclude_auto_fields')
-
-        class ChildFactoryOverride(BaseFactory):
-            char_req = '98 bottles of beer'
             class Meta:
-                include_auto_fields = []
-                exclude_auto_fields = []
-        obj = ChildFactoryOverride.build()
-        self.assertEqual(obj.char_req, ChildFactoryOverride.char_req, 'Auto Factories can override inherit explicit field declarations')
-        self.assertEqual(obj.char_blank_null, None, 'Auto Factories should allow include_auto_fields override')
-        self.assertNotEqual(obj.int_req, None, 'Auto Factories should allow exclude_auto_fields override')
+                abstract = True
+                include_auto_fields = ['int_blank_null', 'int_req', 'int_null']
+                exclude_auto_fields = ['char_blank_null']
+
+        class GrandChildFactory(ChildFactory):
+            class Meta:
+                include_auto_fields = ['char_blank_null']
+                exclude_auto_fields = ['int_blank_null']
+
+        obj = GrandChildFactory.build()
+
+        # explicit field defs always win over auto field defs
+        self.assertEqual(obj.char_blank_null, ChildFactory.char_blank_null)
+
+        # include overridding inherited exclude
+        self.assertIsNotNone(obj.int_req)
+
+        # exclude overriding inherited include
+        self.assertNotIn('int_blank_null', GrandChildFactory._meta.declarations)
+        self.assertIsNone(obj.int_blank_null)
+
+        # inherited exclude
+        self.assertNotIn('char_req', GrandChildFactory._meta.declarations)
+        self.assertEqual(obj.char_req, '')
+
+        # inherited include
+        self.assertIsNotNone(obj.int_null)
+
+    def test_factory_meta_inheritance_concrete(self):
+        """
+        Descendant factories inheriting from concrete factories should inherit autofactory meta attributes
+        but won't remove concrete field instantiations (excluding a previous included field won't work)
+        """
+
+        class BaseFactory(factory.django.DjangoModelFactory):
+            char_blank_null = '99 bottles of beer'
+
+            class Meta:
+                abstract = True
+                model = models.OptionalModel
+                default_auto_fields = True
+                include_auto_fields = ['char_blank_null', 'int_blank_null']
+                exclude_auto_fields = ['int_req', 'char_req']
+
+        class ChildFactory(BaseFactory):
+            char_blank_null = '97 bottles of beer'
+
+            class Meta:
+                abstract = False
+                include_auto_fields = ['int_blank_null', 'int_req', 'int_null']
+                exclude_auto_fields = ['char_blank_null']
+
+        obj = ChildFactory.build()
+        # explicit field defs always win over auto field defs
+        self.assertEqual(obj.char_blank_null, ChildFactory.char_blank_null)
+
+        # include overridding inherited exclude
+        self.assertIsNotNone(obj.int_req)
+
+        # inherited include
+        self.assertIn('int_blank_null', ChildFactory._meta.declarations)
+        self.assertIsNotNone(obj.int_blank_null)
+
+        # inherited exclude
+        self.assertNotIn('char_req', ChildFactory._meta.declarations)
+        self.assertEqual(obj.char_req, '')
+
+        # explicit include
+        self.assertIsNotNone(obj.int_null)
+
+        class GrandChildFactory(ChildFactory):
+            class Meta:
+                include_auto_fields = ['char_blank_null']
+                exclude_auto_fields = ['int_blank_null']
+
+        obj = GrandChildFactory.build()
+
+        # explicit field defs always win over auto field defs
+        self.assertEqual(obj.char_blank_null, ChildFactory.char_blank_null)
+
+        # include overridding inherited exclude
+        self.assertIsNotNone(obj.int_req)
+
+        # exclude won't override inherited include doesn't apply if ancestor include was not abstract
+        self.assertIn('int_blank_null', GrandChildFactory._meta.declarations)
+        self.assertIsNotNone(obj.int_blank_null)
+
+        # inherited exclude
+        self.assertNotIn('char_req', GrandChildFactory._meta.declarations)
+        self.assertEqual(obj.char_req, '')
+
+        # inherited include
+        self.assertIsNotNone(obj.int_null)
 
     # TODO: Test GenericForeignKey
     # TODO: Test GenericForeignKey reverse (GenericRelation?)
