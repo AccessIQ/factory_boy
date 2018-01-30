@@ -293,10 +293,14 @@ class FactoryOptions(object):
             OptionDefault('introspector_class', None, inherit=True),
             # Whether to auto-generate the default set of fields
             OptionDefault('default_auto_fields', False, inherit=True),
+
+            # include_auto_fields and exclude_auto_fields inheritance is handled
+            # as a combined special case in contribute_to_class()
+
             # List of fields to include in auto-generation
-            OptionDefault('include_auto_fields', (), inherit=True),
+            OptionDefault('include_auto_fields', (), inherit=False),
             # List of fields to exclude from auto-generation
-            OptionDefault('exclude_auto_fields', (), inherit=True),
+            OptionDefault('exclude_auto_fields', (), inherit=False),
         ]
 
     def _fill_from_meta(self, meta, base_meta):
@@ -359,6 +363,13 @@ class FactoryOptions(object):
             field_names = set()
             if self.default_auto_fields:
                 field_names.update(self.introspector.get_default_field_names(self.model))
+
+            # Apply include_auto_fields/exclude_auto_fields from inheritance chain
+            factory_parents = [f for f in reversed(self.factory.__mro__[1:]) if hasattr(f, '_meta')]
+            for parent in factory_parents:
+                field_names.update(getattr(parent._meta, 'include_auto_fields', []))
+                field_names.difference_update(getattr(parent._meta, 'exclude_auto_fields', []))
+
             field_names.update(self.include_auto_fields)
 
             exclude_auto_fields = set(self.base_declarations.keys())
