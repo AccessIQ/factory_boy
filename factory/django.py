@@ -185,12 +185,11 @@ class DjangoIntrospector(base.BaseIntrospector):
         if field.auto_created:
             return False
 
-        # Handle GenericForeignKey (untested!)
-        if field.is_relation and field.related_model is None:
-            assert field.concrete   # Are we sure about this?
+        if not field.concrete:
             return False
 
-        if not field.concrete:
+        # Handle GenericForeignKey (untested!)
+        if field.is_relation and field.related_model is None:
             return False
 
         if isinstance(field, (models.AutoField, proxy.OrderWrt)):
